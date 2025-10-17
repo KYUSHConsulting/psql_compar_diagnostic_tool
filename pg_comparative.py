@@ -16,6 +16,15 @@ from dataclasses import dataclass, asdict
 import argparse
 from tabulate import tabulate
 import logging
+from pathlib import Path
+
+# Load .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    print("Warning: python-dotenv not installed. Install with: pip install python-dotenv")
+    pass
 
 logging.basicConfig(
     level=logging.INFO,
@@ -614,8 +623,17 @@ Examples:
     # Output
     parser.add_argument("--output", default="azure_comparison.md", help="Output report file (markdown)")
     parser.add_argument("--format", choices=["markdown", "json"], default="markdown", help="Output format")
+    parser.add_argument("--env-file", default=".env", help="Path to .env file (default: .env)")
 
     args = parser.parse_args()
+
+    # Load .env file if exists
+    env_path = Path(args.env_file)
+    if env_path.exists():
+        logger.info(f"📄 Loading credentials from: {env_path}")
+        load_dotenv(env_path)
+    else:
+        logger.warning(f"⚠️  .env file not found at {env_path}. Will use environment variables or command-line args.")
 
     # Validate inputs
     required_args = [
@@ -625,7 +643,21 @@ Examples:
 
     if not all(required_args):
         parser.print_help()
-        logger.error("❌ Missing required arguments. Use environment variables or command-line args.")
+        logger.error("❌ Missing required arguments. Provide .env file or use environment/command-line args.")
+        print("\n📝 Example .env file:")
+        print("""
+PG1_HOST=fast.postgres.database.azure.com
+PG1_DB=yourdatabase
+PG1_USER=admin
+PG1_PASS=password123
+PG1_PORT=5432
+
+PG2_HOST=slow.postgres.database.azure.com
+PG2_DB=yourdatabase
+PG2_USER=admin
+PG2_PASS=password456
+PG2_PORT=5432
+        """)
         sys.exit(1)
 
     # Create server configs
